@@ -1,0 +1,33 @@
+name: Example CD workflow for daeploy
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Package into tar archive
+      run: |
+        tar -zcvf /tmp/service.tar.gz .
+    - name: Deploy code
+      id: request
+      uses: fjogeleit/http-request-action@master
+      with:
+        url: 'https://<your host address>/services/~tar'
+        method: 'POST'
+        data: '{"name": "${{ github.event.repository.name }}", "version": "${{ github.event.release.tag_name }}"}'
+        files: '{ "file": "/tmp/service.tar.gz" }'
+        contentType: 'multipart/form-data'
+        bearerToken: "${{ secrets.DAEPLOY_TOKEN }}"
+        timeout: 60000
+    - name: Show Response
+      run: echo ${{ steps.request.outputs.response }}
